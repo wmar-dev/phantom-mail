@@ -100,7 +100,7 @@ Messages are automatically removed after a limited time so the service does not 
 - Oversized messages and oversized attachments are rejected or truncated per a stated limit rather than crashing the service.
 - Messages with only HTML, only text, no subject, non-English character sets, or malformed headers are still stored and displayed.
 - HTML content from untrusted senders must not run scripts or load remote content in the web interface.
-- A flood of mail to one mailbox or from one sender does not take the service down for others.
+- A flood of mail to one mailbox, from one sender, or to many distinct random mailbox names does not take the service down for others; the number of mailboxes is capped, and mail for a new mailbox beyond the cap gets a temporary failure while existing mailboxes keep receiving.
 - Multiple clients waiting on the same mailbox all receive the new message.
 - Messages with attachments list the attachments, and they can be downloaded.
 - When storage is full, the sender is told to retry later (a temporary failure) rather than the message being silently dropped or the service crashing.
@@ -114,7 +114,7 @@ Messages are automatically removed after a limited time so the service does not 
 - **FR-002**: System MUST treat mailbox names case-insensitively and MUST define how plus-addressing maps to a mailbox.
 - **FR-003**: System MUST reject inbound mail for domains it is not configured to serve.
 - **FR-004**: System MUST store each received message with sender, recipients, subject, received time, text body, HTML body, and attachments.
-- **FR-005**: Web interface MUST let a user enter any mailbox name and view its messages newest first, with no login.
+- **FR-005**: Web interface MUST let a user enter any mailbox name and view its messages newest first, with no account required (unless an access token is configured, see FR-027).
 - **FR-006**: Web interface MUST display a selected message's headers and body, rendering HTML safely (no script execution, no automatic remote content loading).
 - **FR-007**: Web interface MUST show newly arrived messages in an open mailbox without a manual reload.
 - **FR-008**: Web interface MUST let users delete individual messages and empty a mailbox.
@@ -122,7 +122,7 @@ Messages are automatically removed after a limited time so the service does not 
 - **FR-010**: API MUST provide a way to wait for a new message in a mailbox with a caller-specified timeout.
 - **FR-011**: API MUST allow attachments to be downloaded.
 - **FR-012**: System MUST automatically delete messages after a configurable retention period (default 24 hours) and cap messages per mailbox (default 100 messages).
-- **FR-013**: System MUST enforce a configurable maximum message size and per-remote-address and per-mailbox rate limits to protect availability.
+- **FR-013**: System MUST enforce a configurable maximum message size and per-remote-address and per-mailbox rate limits, plus a configurable cap on the number of mailboxes, to protect availability.
 - **FR-014**: System MUST run entirely on a developer machine with one documented command and require no cloud account, credentials, or internet access.
 - **FR-015**: System MUST provide a documented way to deliver a test email to a local instance and a single documented command that runs the full automated test suite offline.
 - **FR-021**: System MUST be packaged as a Docker container image that runs the complete service (web, API, mail receiver) with a single command, and MUST provide a Docker Compose setup for local use so a developer needs only Docker installed.
