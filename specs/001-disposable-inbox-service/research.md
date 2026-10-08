@@ -135,7 +135,7 @@ friendly, documented).
 ## R9. Container image and Docker
 
 - **Decision**: Multi-stage `Dockerfile`: `golang:1.23-alpine` builder (`-trimpath -ldflags
-  "-s -w"`) to a `scratch` final stage containing the binary and CA certificates only; runs as
+  "-s -w"`) to a `scratch` final stage containing only the binary (the service makes no outbound TLS calls, so no CA bundle); runs as
   a numeric non-root user; `VOLUME /data`; `EXPOSE 8080 2525`; `HEALTHCHECK` implemented by
   the binary itself (`phantom-mail healthcheck`, since scratch has no curl). Image target
   < 15 MB. `compose.yaml` maps `8080:8080` and `25:2525` (local default `2525:2525` to avoid

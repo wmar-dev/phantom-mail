@@ -79,7 +79,7 @@ internal/
 ├── retention/               # expiry + per-mailbox and total-size eviction
 ├── limits/                  # per-IP / per-mailbox rate limiting (token bucket) + trusted-proxy client-IP resolution (PM_TRUSTED_PROXIES)
 ├── httpapi/                 # REST handlers, SSE, health, OpenAPI serving, optional token auth; attachments served as downloads with nosniff
-└── web/                     # embedded static UI (index.html, app.js, app.css)
+└── web/                     # embedded static UI (index.html, app.js, signin.js, app.css, plus *.test.mjs)
 
 tests/
 ├── integration/             # real SMTP client -> store -> HTTP client

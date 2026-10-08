@@ -198,7 +198,7 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T072 [P] Memory bound test: burst-ingest and 50 active mailboxes with SSE subscribers keeps heap under the plan's bound with zero lost messages and list requests under 50 ms at p95 (SC-007), and idle RSS stays under 20 MB in the container, in tests/bench/memory_test.go
 - [ ] T073 [P] Startup test: 10,000 stored messages rebuild the index and become ready in under 1 s in tests/bench/startup_test.go
 - [ ] T074 [P] Write docs/index.md (overview, quick start, doc map)
-- [ ] T075 [P] Write the complete configuration reference (every `PM_*` setting, default, effect, example) in docs/configuration.md, including the deliberate choice that mailbox names are not scoped by domain
+- [ ] T075 [P] Write the complete configuration reference (every `PM_*` setting, default, effect, example, including `PM_STORAGE=memory`: ephemeral mode where nothing is persisted, for demos and tests) in docs/configuration.md, including the deliberate choice that mailbox names are not scoped by domain
 - [ ] T076 [P] Write the end-to-end verification-code testing guide (unique mailbox per run, wait, extract code, examples in curl and Go) in docs/testing-verification-flows.md
 - [ ] T077 [P] Write development docs (running tests and benchmarks natively and in Docker, repo layout, dependency policy, adding a setting or endpoint with its docs) in docs/development.md
 - [ ] T078 Docs verification test: extract fenced `bash` blocks tagged for verification from docs/ and quickstart.md, run them against a started instance, and assert documented settings and endpoints exist in config and openapi.yaml, in tests/docs/docs_test.go
