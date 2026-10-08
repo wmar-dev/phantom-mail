@@ -1,0 +1,7 @@
+this line is not a header at all
+From: sender@example.com
+Subject: still works
+bad header without colon
+Content-Type: text/plain
+
+body survives

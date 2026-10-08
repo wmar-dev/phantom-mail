@@ -24,7 +24,7 @@ Native alternative: `make run` (builds and runs `./cmd/phantom-mail` with the sa
 
 ## 2. Deliver a test email (User Story 3)
 
-```bash
+```bash verify
 curl --url smtp://localhost:2525 --mail-from sender@example.com \
   --mail-rcpt alice@localhost \
   -T - <<'EOF'
@@ -38,7 +38,7 @@ EOF
 
 ## 3. Read it through the API (User Story 2)
 
-```bash
+```bash verify
 curl -s http://localhost:8080/api/v1/mailboxes/alice/messages
 curl -s "http://localhost:8080/api/v1/mailboxes/alice/messages/wait?timeout=5"
 ```
@@ -52,7 +52,7 @@ stale mail is never picked up.
 
 Typical test-script pattern (wait, then extract the code):
 
-```bash
+```bash verify
 curl -s "http://localhost:8080/api/v1/mailboxes/alice/messages/wait?timeout=30" \
   | jq -r '.messages[0].id' \
   | xargs -I{} curl -s http://localhost:8080/api/v1/mailboxes/alice/messages/{} \
@@ -66,7 +66,7 @@ confirm it appears without reloading.
 
 ## 5. Delete and cleanup (User Stories 2 and 5)
 
-```bash
+```bash verify
 curl -s -X DELETE http://localhost:8080/api/v1/mailboxes/alice/messages   # 204
 ```
 

@@ -1,0 +1,31 @@
+From: sender@example.com
+To: alice@localhost
+Subject: With attachments
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer"
+
+--outer
+Content-Type: multipart/alternative; boundary="inner"
+
+--inner
+Content-Type: text/plain
+
+see attached
+--inner
+Content-Type: text/html
+
+<p>see attached</p>
+--inner--
+--outer
+Content-Type: text/plain; name="report.txt"
+Content-Disposition: attachment; filename="report.txt"
+Content-Transfer-Encoding: base64
+
+aGVsbG8gYXR0YWNobWVudA==
+--outer
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="../../etc/passwd"
+Content-Transfer-Encoding: base64
+
+c2VjcmV0
+--outer--

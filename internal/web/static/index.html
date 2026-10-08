@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Phantom Mail</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Phantom Mail</h1>
+    <form id="open-form" autocomplete="off">
+      <label for="mailbox" class="sr">Mailbox name</label>
+      <input id="mailbox" name="mailbox" placeholder="mailbox name, e.g. alice" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80" required>
+      <button type="submit">Open</button>
+    </form>
+    <span id="status" role="status" aria-live="polite"></span>
+  </header>
+
+  <main>
+    <section id="welcome">
+      <h2>Disposable inbox for testing</h2>
+      <p>Pick any mailbox name above. Mail sent to <code>name@<span class="host"></span></code> shows up here instantly, with no sign-up. Use it to receive verification codes while testing.</p>
+      <p class="muted">Mailboxes are public: anyone who knows a name can read it. Don't use this for anything sensitive.</p>
+    </section>
+
+    <div id="inbox" hidden>
+      <aside class="list-pane" aria-label="Messages">
+        <div class="list-head">
+          <p class="address"><span id="address"></span></p>
+          <div class="actions">
+            <button type="button" id="copy-address" class="ghost">Copy address</button>
+            <button type="button" id="empty-mailbox" class="ghost danger">Delete all</button>
+          </div>
+        </div>
+        <ul id="messages"></ul>
+        <p id="empty-note" class="muted">No messages yet. Waiting for mail&hellip;</p>
+      </aside>
+
+      <article class="detail-pane" aria-live="polite">
+        <p id="pick" class="muted">Select a message to read it.</p>
+        <div id="detail" hidden>
+          <div class="detail-head">
+            <h2 id="d-subject"></h2>
+            <button type="button" id="d-delete" class="ghost danger">Delete</button>
+          </div>
+          <dl class="meta">
+            <dt>From</dt><dd id="d-from"></dd>
+            <dt>To</dt><dd id="d-to"></dd>
+            <dt>Received</dt><dd id="d-date"></dd>
+          </dl>
+          <div id="d-codes" class="codes" hidden></div>
+          <div class="tabs" id="d-tabs" role="group" aria-label="Body format">
+            <button type="button" id="tab-rendered" aria-pressed="true">Message</button>
+            <button type="button" id="tab-text" aria-pressed="false">Plain text</button>
+          </div>
+          <div id="d-body" class="body"></div>
+          <ul id="d-attachments" class="attachments" hidden></ul>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <dialog id="signin" aria-labelledby="signin-title">
+    <form id="signin-form" method="dialog">
+      <h2 id="signin-title">Access token required</h2>
+      <p>This instance is protected. Enter its access token to continue.</p>
+      <label for="token" class="sr">Access token</label>
+      <input id="token" type="password" autocomplete="current-password" required>
+      <p id="signin-msg" role="alert"></p>
+      <button type="submit">Sign in</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

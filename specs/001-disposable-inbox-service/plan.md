@@ -67,25 +67,33 @@ specs/001-disposable-inbox-service/
 ```text
 cmd/
 └── phantom-mail/
-    └── main.go              # wiring, signal handling, graceful shutdown
+    ├── main.go              # config -> app.Run, signal handling; "healthcheck" subcommand
+    └── healthcheck.go       # probe of /healthz for the container HEALTHCHECK
 
 internal/
+├── app/                     # wiring of store, hub, SMTP, HTTP, janitor; graceful shutdown
+├── clock/                   # real and fake clocks
 ├── config/                  # PM_* env parsing, defaults, validation
 ├── mailbox/                 # name normalization (case, plus-addressing), domain matching
-├── message/                 # Message/Attachment types, MIME parsing, size limits
-├── store/                   # Store interface; fs/ (volume-backed) and memory/ implementations
-├── smtpd/                   # minimal receive-only SMTP server (no relay, no AUTH, no STARTTLS in v1)
+├── message/                 # Message/Attachment types, IDs, tolerant MIME parsing
+├── store/                   # Store interface + shared Core (index, limits, retention)
+│   ├── fs/                  # volume-backed blobs: one .eml file per message
+│   ├── memory/              # in-memory blobs
+│   └── storetest/           # backend-agnostic contract test suite
+├── inbox/                   # store + hub: announces every change to subscribers
 ├── hub/                     # in-process pub/sub powering wait and SSE
-├── retention/               # expiry + per-mailbox and total-size eviction
+├── smtpd/                   # minimal receive-only SMTP server (no relay, no AUTH, no STARTTLS in v1)
+├── retention/               # background sweep: expiry + total-size cap
 ├── limits/                  # per-IP / per-mailbox rate limiting (token bucket) + trusted-proxy client-IP resolution (PM_TRUSTED_PROXIES)
-├── httpapi/                 # REST handlers, SSE, health, OpenAPI serving, optional token auth; attachments served as downloads with nosniff
-└── web/                     # embedded static UI (index.html, app.js, signin.js, app.css, plus *.test.mjs)
+├── httpapi/                 # REST handlers, SSE, sessions, health, OpenAPI serving; attachments served as downloads with nosniff
+└── web/                     # embedded static UI
+    └── static/              # index.html, app.js, lib.js, signin.js, app.css, plus *.test.mjs (not served)
 
 tests/
-├── integration/             # real SMTP client -> store -> HTTP client
+├── integration/             # real SMTP client -> store -> HTTP client; receive-only guard; OpenAPI contract
 ├── e2e/                     # runs the built binary / container
-├── docs/                    # executes commands and examples from docs/
-└── bench/                   # ingest and list benchmarks backing the performance goals
+├── docs/                    # executes "bash verify" examples; checks settings, routes, links
+└── bench/                   # ingest, latency, memory and startup gates plus benchmarks
 
 docs/
 ├── index.md                 # overview + quick start
@@ -94,15 +102,17 @@ docs/
 ├── api.md                   # API reference with examples and errors
 ├── web-ui.md                # web interface guide
 ├── deployment.md            # cloud deployment, DNS (MX/A), TLS via reverse proxy (SSE buffering off), port 25 notes, troubleshooting
-├── examples/
-│   └── Caddyfile            # example HTTPS reverse proxy in front of port 8080
 ├── testing-verification-flows.md   # end-to-end example of a code-verification sign-up test
-└── development.md           # running tests, benchmarks, contributing
+├── development.md           # running tests, benchmarks, contributing
+└── examples/
+    ├── Caddyfile            # example HTTPS reverse proxy in front of port 8080
+    ├── compose.prod.yaml    # single-host production layout (app + Caddy)
+    └── verification-code/   # Go program that waits for an email and prints the code
 
 README.md                    # short intro and quick start, links to docs/index.md
 .github/workflows/ci.yml     # runs `make test` and `make docs-check` (same commands as local)
 .dockerignore
-Dockerfile                   # multi-stage: golang builder -> scratch runtime
+Dockerfile                   # targets: build, runtime (scratch), test (toolchain for compose)
 compose.yaml                 # app + `test` service profile
 Makefile                     # build, test, bench, docker, docs-check
 ```

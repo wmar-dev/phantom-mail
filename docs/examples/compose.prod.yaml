@@ -1,0 +1,45 @@
+# Example production layout on a single host with a public IP address.
+#   * Phantom Mail receives mail on host port 25 (container port 2525).
+#   * Caddy terminates HTTPS on ports 80/443 and proxies to Phantom Mail.
+#
+# Before starting:
+#   1. Point DNS at this host (see docs/deployment.md): an MX record for your mail
+#      domain and an A record for the MX host and the web host.
+#   2. Replace inbox.example.com here and in docs/examples/Caddyfile.
+#   3. export PM_API_TOKEN=<a long random string>   (optional but recommended)
+#   4. docker compose -f docs/examples/compose.prod.yaml up -d
+name: phantom-mail-prod
+
+services:
+  phantom-mail:
+    image: phantom-mail:local          # docker build --target runtime -t phantom-mail:local .
+    restart: unless-stopped
+    stop_grace_period: 30s             # let in-flight messages finish on shutdown
+    environment:
+      PM_DOMAINS: inbox.example.com
+      PM_API_TOKEN: ${PM_API_TOKEN:-}
+      # Caddy reaches the app from the Docker network, so trust that range for
+      # X-Forwarded-For / X-Forwarded-Proto.
+      PM_TRUSTED_PROXIES: 172.16.0.0/12
+      PM_RETENTION: 24h
+    ports:
+      - "25:2525"                      # inbound SMTP from the internet
+    volumes:
+      - phantom-mail-data:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [phantom-mail]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  phantom-mail-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,280 @@
+openapi: 3.0.3
+info:
+  title: Phantom Mail API
+  version: 1.0.0
+  description: >
+    Receive-only disposable inbox API. Mailboxes are created implicitly when mail arrives.
+    Mailbox names are case-insensitive; a "+tag" suffix is ignored. If the server is started
+    with PM_API_TOKEN, every request except /healthz and /api/v1/session must send "Authorization: Bearer <token>" or carry the session cookie obtained from POST /api/v1/session (used by the web interface, because browsers cannot add headers to EventSource, iframes, or downloads).
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+paths:
+  /api/v1/session:
+    post:
+      summary: Sign in with the access token (web interface)
+      description: >
+        Only meaningful when the server has PM_API_TOKEN set. Exchanges the token for an
+        HttpOnly, SameSite=Strict session cookie. Failed attempts are rate limited.
+      operationId: createSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '204': { description: Signed in; Set-Cookie header present }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Sign out (clears the session cookie)
+      operationId: deleteSession
+      security: []
+      responses:
+        '204': { description: Signed out }
+  /api/v1/mailboxes/{mailbox}/messages:
+    get:
+      summary: List messages in a mailbox, newest first
+      operationId: listMessages
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+        - name: after
+          in: query
+          description: Return only messages newer than this message id.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Message summaries (empty list for an unused mailbox)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messages]
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: '#/components/schemas/MessageSummary' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Delete every message in a mailbox
+      operationId: emptyMailbox
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+      responses:
+        '204': { description: Mailbox emptied (also when it was already empty) }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/mailboxes/{mailbox}/messages/wait:
+    get:
+      summary: Wait for a new message (long poll)
+      description: >
+        Returns immediately with messages newer than `after` if any exist, otherwise holds the
+        request open until one arrives or the timeout elapses.
+      operationId: waitForMessage
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+        - name: after
+          in: query
+          description: Message id; only messages newer than this count. Omit to count every message currently in the mailbox, so a message that arrived before the call is never missed. Use a unique mailbox name per test run (or empty the mailbox first) to avoid picking up stale mail.
+          schema: { type: string }
+        - name: timeout
+          in: query
+          description: Seconds to wait, 1-60.
+          schema: { type: integer, minimum: 1, maximum: 60, default: 30 }
+      responses:
+        '200':
+          description: At least one new message
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messages]
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: '#/components/schemas/MessageSummary' }
+        '204': { description: Timeout elapsed with no new message }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/mailboxes/{mailbox}/messages/{id}:
+    get:
+      summary: Get a full message
+      operationId: getMessage
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '200':
+          description: The message
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Delete one message
+      operationId: deleteMessage
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/mailboxes/{mailbox}/messages/{id}/html:
+    get:
+      summary: HTML body for safe display in a sandboxed frame
+      description: >
+        Served with a Content-Security-Policy that blocks scripts and remote content.
+      operationId: getMessageHtml
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        '200':
+          description: HTML document
+          content:
+            text/html: { schema: { type: string } }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/v1/mailboxes/{mailbox}/messages/{id}/attachments/{index}:
+    get:
+      summary: Download an attachment
+      operationId: getAttachment
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+        - $ref: '#/components/parameters/MessageId'
+        - name: index
+          in: path
+          required: true
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Attachment bytes with its original content type
+          content:
+            application/octet-stream: { schema: { type: string, format: binary } }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/v1/mailboxes/{mailbox}/events:
+    get:
+      summary: Live message events (Server-Sent Events)
+      description: >
+        Emits `message` events whose data is a MessageSummary JSON object when mail arrives,
+        and `deleted` events with `{"id": "..."}`. A comment heartbeat is sent every 15 seconds.
+      operationId: streamEvents
+      parameters:
+        - $ref: '#/components/parameters/Mailbox'
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream: { schema: { type: string } }
+        '400': { $ref: '#/components/responses/Error' }
+  /healthz:
+    get:
+      summary: Health status (no authentication)
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, uptime_seconds, messages, store_bytes]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  uptime_seconds: { type: integer }
+                  messages: { type: integer }
+                  store_bytes: { type: integer }
+  /openapi.yaml:
+    get:
+      summary: This specification, served by the running service
+      operationId: openapi
+      security: []
+      responses:
+        '200':
+          description: OpenAPI document
+          content:
+            application/yaml: { schema: { type: string } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: pm_session
+  parameters:
+    Mailbox:
+      name: mailbox
+      in: path
+      required: true
+      description: Mailbox name, 1-64 chars of letters, digits, '.', '_', '-'; case-insensitive; "+tag" suffix ignored.
+      schema: { type: string }
+    MessageId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, enum: [invalid_mailbox, not_found, unauthorized, rate_limited, bad_request] }
+            message: { type: string }
+    AttachmentInfo:
+      type: object
+      required: [index, filename, content_type, size]
+      properties:
+        index: { type: integer }
+        filename: { type: string }
+        content_type: { type: string }
+        size: { type: integer }
+    MessageSummary:
+      type: object
+      required: [id, mailbox, from, to, subject, received_at, size, attachment_count]
+      properties:
+        id: { type: string }
+        mailbox: { type: string }
+        from: { type: string }
+        to: { type: array, items: { type: string } }
+        subject: { type: string }
+        received_at: { type: string, format: date-time }
+        size: { type: integer }
+        attachment_count: { type: integer }
+    Message:
+      allOf:
+        - $ref: '#/components/schemas/MessageSummary'
+        - type: object
+          required: [text, html, attachments]
+          properties:
+            text: { type: string }
+            html: { type: string }
+            attachments:
+              type: array
+              items: { $ref: '#/components/schemas/AttachmentInfo' }

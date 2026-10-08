@@ -1,0 +1,10 @@
+.git
+.github
+.claude
+.specify
+specs
+bin
+data
+*.test
+.env*
+**/.DS_Store

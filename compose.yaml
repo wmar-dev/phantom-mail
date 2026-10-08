@@ -1,0 +1,40 @@
+# Local development and testing.
+#   docker compose up --build          run the service (web :8080, SMTP :2525)
+#   docker compose run --rm test       run the whole test suite, offline
+name: phantom-mail
+
+services:
+  phantom-mail:
+    build:
+      context: .
+      target: runtime
+    image: phantom-mail:local
+    ports:
+      - "8080:8080"   # web interface and API
+      - "2525:2525"   # inbound SMTP (use 25:2525 on a real host)
+    environment:
+      PM_DOMAINS: ${PM_DOMAINS:-localhost}
+      PM_API_TOKEN: ${PM_API_TOKEN:-}
+      PM_RETENTION: ${PM_RETENTION:-24h}
+      PM_MAX_MESSAGES_PER_MAILBOX: ${PM_MAX_MESSAGES_PER_MAILBOX:-100}
+      PM_LOG_LEVEL: ${PM_LOG_LEVEL:-info}
+    volumes:
+      - phantom-mail-data:/data
+    restart: unless-stopped
+
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    working_dir: /src
+    volumes:
+      - .:/src
+      - go-build-cache:/root/.cache/go-build
+      - go-mod-cache:/go/pkg/mod
+    command: ["make", "test", "docs-check"]
+
+volumes:
+  phantom-mail-data:
+  go-build-cache:
+  go-mod-cache:

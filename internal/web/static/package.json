@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Marks the web UI scripts as ES modules so Node's built-in test runner can import them. Not served."
+}

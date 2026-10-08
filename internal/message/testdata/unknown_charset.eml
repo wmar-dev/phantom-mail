@@ -1,0 +1,7 @@
+From: sender@example.com
+To: alice@localhost
+Subject: weird
+Content-Type: text/plain; charset=x-weird-charset
+Content-Transfer-Encoding: quoted-printable
+
+caf=E9 ok

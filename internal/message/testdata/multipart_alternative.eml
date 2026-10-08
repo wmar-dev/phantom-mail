@@ -1,0 +1,15 @@
+From: sender@example.com
+To: alice@localhost
+Subject: Alternative
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+plain part 654321
+--b1
+Content-Type: text/html; charset=utf-8
+
+<p>html part <b>654321</b></p>
+--b1--

@@ -1,0 +1,12 @@
+# HTTPS in front of Phantom Mail using Caddy, which obtains and renews
+# certificates automatically. Replace the host name with your own.
+#
+# Used by docs/examples/compose.prod.yaml; see docs/deployment.md.
+
+inbox.example.com {
+	reverse_proxy phantom-mail:8080 {
+		# Do not buffer responses: live updates use a long-lived event stream
+		# (Server-Sent Events) that must reach the browser as it is written.
+		flush_interval -1
+	}
+}

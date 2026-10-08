@@ -1,0 +1,7 @@
+From: sender@example.com
+To: alice@localhost
+Subject: B64
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+SGVsbG8gYmFzZTY0IHdvcmxk
