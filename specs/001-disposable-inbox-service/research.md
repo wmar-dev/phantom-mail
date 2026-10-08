@@ -78,7 +78,7 @@ friendly, documented).
 
 - **Decision**: A single janitor goroutine ticks every 30 s (configurable): deletes messages older
   than `PM_RETENTION` (default 24h); enforces `PM_MAX_MESSAGES_PER_MAILBOX` (default 100,
-  oldest first, also checked inline on ingest) and `PM_MAX_TOTAL_BYTES` (default 1 GiB,
+  oldest first, also checked inline on ingest) and `PM_MAX_MAILBOXES` (default 10,000; empty mailbox directories are removed immediately, so random-name floods cannot exhaust inodes) and `PM_MAX_TOTAL_BYTES` (default 1 GiB,
   oldest across mailboxes first). Expired messages are filtered out of reads immediately so
   they are never served between janitor ticks (SC-008: unavailable within 10 minutes; actually
   immediate).

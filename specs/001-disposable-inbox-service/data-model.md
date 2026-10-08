@@ -76,3 +76,5 @@ Domain (config) 1 ── * Mailbox (implicit) 1 ── * Message 1 ── * Atta
 - `received_at + PM_RETENTION <= now` means the message is treated as nonexistent for every
   read, even before the janitor deletes the file (SC-008).
 - Total on-disk bytes never exceed `PM_MAX_TOTAL_BYTES` after an ingest completes.
+- A mailbox directory exists only while it holds at least one message; it is removed with its last message (delete, expiry, or eviction).
+- At most `PM_MAX_MAILBOXES` (default 10,000) mailboxes exist at once. Mail for a new mailbox name beyond that limit is refused with an SMTP temporary failure (`452`); existing mailboxes keep receiving.
