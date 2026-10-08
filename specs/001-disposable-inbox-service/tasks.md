@@ -54,7 +54,7 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T017 [P] Implement Message/Attachment types and time-ordered ID generation (48-bit ms timestamp + 80 random bits, hex) in internal/message/message.go
 - [ ] T018 Implement MIME parsing (text/HTML bodies, attachments with sanitized filenames, hand-mapped UTF-8/ASCII/ISO-8859-1/Windows-1252 charsets with lossy fallback, tolerant of malformed input) in internal/message/parse.go
 - [ ] T019 [P] Define the `Store` interface and implement the in-memory store in internal/store/store.go and internal/store/memory/memory.go
-- [ ] T020 Implement the file-backed store (`<data>/<mailbox>/<id>.eml`, temp-write + fsync + rename, in-memory metadata index rebuilt at startup, bodies read on demand, per-mailbox and total-bytes eviction, expired messages filtered on read) in internal/store/fs/fs.go
+- [ ] T020 Implement the file-backed store (`<data>/<mailbox>/<id>.eml`, temp-write + fsync + rename, in-memory metadata index rebuilt at startup from file names, sizes, and header blocks only, attachment count cached on first listing, bodies read on demand, per-mailbox and total-bytes eviction, expired messages filtered on read) in internal/store/fs/fs.go
 - [ ] T021 [P] Implement the in-process pub/sub hub in internal/hub/hub.go
 - [ ] T022 [P] Implement the token-bucket rate limiter in internal/limits/limits.go and trusted-proxy client-IP resolution in internal/limits/proxy.go
 - [ ] T023 Implement the receive-only SMTP server (EHLO/HELO, MAIL, RCPT, DATA, RSET, NOOP, QUIT, `SIZE`, streaming read with hard size cap, timeouts, domain and mailbox validation, rate limiting, `452` on store failure, no relay/AUTH) in internal/smtpd/smtpd.go

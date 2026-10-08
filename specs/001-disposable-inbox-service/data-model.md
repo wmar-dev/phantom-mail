@@ -40,7 +40,7 @@ unknown charsets are stored with best-effort decoding rather than rejected.
 
 **Storage**: raw bytes on disk at `<data>/<mailbox>/<id>.eml` plus an in-memory index entry
 holding the list-view fields (`id`, `mailbox`, `from`, `to`, `subject`, `received_at`, `size`,
-attachment count). `text`, `html`, and attachment content are parsed from the file on demand.
+attachment count, computed on first listing and then cached). `text`, `html`, and attachment content are parsed from the file on demand.
 
 **Lifecycle**: `received` → (`deleted` by user | `expired` by retention | `evicted` by
 per-mailbox or total-size cap). No intermediate states; deletion is permanent.

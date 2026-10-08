@@ -51,10 +51,12 @@ friendly, documented).
 
 ## R4. Storage
 
-- **Decision**: One file per message (raw RFC 5322 bytes plus a small JSON header sidecar
-  generated at ingest) under `PM_DATA_DIR/<mailbox>/<id>`, with an **in-memory metadata index**
-  (id, mailbox, sender, subject, received time, size, attachment list) rebuilt by scanning the
-  directory at startup. Bodies and attachments are read from disk on demand. Writes are
+- **Decision**: One file per message (the raw RFC 5322 bytes, no sidecar) at
+  `PM_DATA_DIR/<mailbox>/<id>.eml`, with an **in-memory metadata index** (id, mailbox, sender,
+  recipients, subject, received time, size, attachment count) rebuilt by scanning the directory
+  at startup. Received time is decoded from the time-ordered id and size from the file, so
+  startup reads only each file's header block; the attachment count is computed on first
+  listing and cached in the index. Bodies and attachments are read from disk on demand. Writes are
   `write temp + fsync + rename` so a crash never leaves a half-written message that is served.
   A `Store` interface fronts it with an in-memory implementation for tests and a
   `PM_STORAGE=memory` mode for ephemeral runs.
