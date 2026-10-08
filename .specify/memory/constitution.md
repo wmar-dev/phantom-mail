@@ -1,14 +1,15 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 → 1.1.0 (MINOR: new principle added)
-Modified principles: none renamed; Development Workflow updated to cover Principle V
-Added sections: Principle V. Thoroughly Documented
+Version change: 1.1.0 → 1.1.1 (PATCH: clarification of Principle III)
+Modified principles: III. Cloud Friendly (durable state may use a mounted volume)
+Added sections: none
 Removed sections: none
 Templates:
   ✅ .specify/templates/plan-template.md (added documentation gate)
   ✅ .specify/templates/tasks-template.md (added documentation tasks guidance)
   ✅ .specify/templates/spec-template.md (no change needed)
 Follow-up TODOs: none
+Prior: 1.1.0 added Principle V (Thoroughly Documented)
 -->
 # Phantom Mail Constitution
 
@@ -37,8 +38,9 @@ faster builds.
 ### III. Cloud Friendly
 The system MUST run as stateless, containerizable processes. Configuration MUST come
 from environment variables (twelve-factor); secrets MUST never be committed. Durable
-state MUST live behind an interface backed by external services (database, object
-store, queue), not local disk. Logs MUST go to stdout/stderr as structured output.
+state MUST live behind an interface and MUST be kept on a mounted volume or an
+external service (database, object store, queue), never on the container's ephemeral
+filesystem. Logs MUST go to stdout/stderr as structured output.
 Processes MUST start quickly, shut down gracefully on SIGTERM, and expose a health
 check. Code MUST NOT be coupled to a single cloud vendor without an abstraction
 boundary.
@@ -94,4 +96,4 @@ or materially expanded principles, PATCH for clarifications. All plans and revie
 verify compliance; justified exceptions MUST be recorded in the plan's Complexity
 Tracking. Use CLAUDE.md and the current plan for runtime development guidance.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-07
+**Version**: 1.1.1 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-07
