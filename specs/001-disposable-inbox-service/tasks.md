@@ -192,7 +192,7 @@ description: "Task list for the Disposable Inbox Service"
 
 **Purpose**: Performance proof, documentation completeness, and docs verification.
 
-- [ ] T069 [P] Ingest throughput benchmark (target: at least 500 messages/s on one vCPU) and list/get latency benchmarks (p95 under 10 ms / 20 ms at 100 messages) in tests/bench/bench_test.go
+- [ ] T069 [P] Ingest throughput benchmark (gate: at least 100 messages/s with fsynced writes on one vCPU; report the measured rate above that without failing) and list/get latency benchmarks (p95 under 10 ms / 20 ms at 100 messages) in tests/bench/bench_test.go
 - [ ] T070 [P] Memory bound test: burst-ingest and 50 active mailboxes with SSE subscribers keeps heap under the plan's bound with zero lost messages and list requests under 50 ms at p95 (SC-007), and idle RSS stays under 20 MB in the container, in tests/bench/memory_test.go
 - [ ] T071 [P] Startup test: 10,000 stored messages rebuild the index and become ready in under 1 s in tests/bench/startup_test.go
 - [ ] T072 [P] Write docs/index.md (overview, quick start, doc map)

@@ -29,7 +29,7 @@ with environment-only configuration. See [research.md](research.md) for the deci
 
 **Project Type**: web-service (single process: SMTP + HTTP API + static web UI)
 
-**Performance Goals**: Ingest ≥ 500 messages/s sustained on one vCPU; message visible to list/wait/SSE within 1 s of SMTP `DATA` completion (p95); mailbox list p95 < 10 ms and message fetch p95 < 20 ms at 100 messages per mailbox; cold start to ready < 1 s with 10,000 stored messages.
+**Performance Goals**: Ingest ≥ 100 messages/s sustained with durable (fsynced) writes on one vCPU, measured but not gated above that (storage speed varies widely, so a higher rate is a stretch goal, not a requirement); message visible to list/wait/SSE within 1 s of SMTP `DATA` completion (p95); mailbox list p95 < 10 ms and message fetch p95 < 20 ms at 100 messages per mailbox; cold start to ready < 1 s with 10,000 stored messages.
 
 **Constraints**: Idle resident memory < 20 MB and < 64 MB under sustained load at 50 active mailboxes; container image < 15 MB; web UI initial payload < 30 KB uncompressed with no third-party requests; hard memory bounds from message-size cap, per-mailbox count cap, and total-store byte cap (oldest evicted first); no outbound mail ever. Runtime image and `go.mod` stay free of Node and third-party modules. Security and operability rules: HTML bodies render only in a sandboxed frame (no `allow-same-origin`) behind a strict CSP; attachments are served as downloads with `X-Content-Type-Options: nosniff`; client IPs come from `X-Forwarded-For` only when the peer is in `PM_TRUSTED_PROXIES`; the SMTP server answers `452` (temporary failure) when storage is full; mailbox names are not scoped by domain.
 

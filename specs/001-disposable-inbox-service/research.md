@@ -66,6 +66,9 @@ friendly, documented).
   dependency, +10 MB binary; CGO driver breaks static builds); embedded KV like bbolt/Badger
   (dependency, needless for this access pattern); Postgres/Redis (violates local-friendliness
   and footprint, adds services).
+- **Durability trade-off**: Every message is fsynced before the SMTP `250` reply, so accepted
+  mail is never lost. Ingest speed therefore depends on storage speed, and a slow volume may
+  miss the stretch throughput goal; that is accepted, and no fsync toggle is provided.
 - **Scale limit**: Single instance; horizontal scaling and shared storage across replicas are
   out of scope (spec assumption).
 
