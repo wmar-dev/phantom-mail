@@ -75,7 +75,7 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T025 [P] [US1] HTTP handler tests for `GET /api/v1/mailboxes/{mailbox}/messages` (empty mailbox returns `[]`, newest first, limit, invalid name `400` with error schema) and `GET .../messages/{id}` (full body, `404`) in internal/httpapi/messages_test.go
 - [ ] T026 [P] [US1] Handler tests for `GET .../messages/{id}/html` asserting the CSP header (`default-src 'none'`, no scripts, no remote content), `X-Content-Type-Options: nosniff`, and HTML-only/text-only handling in internal/httpapi/html_test.go
 - [ ] T027 [P] [US1] SSE tests (`message` event on ingest, heartbeat comment, client disconnect releases subscription) in internal/httpapi/events_test.go
-- [ ] T028 [P] [US1] Web UI logic tests with the Node built-in runner (`node --test`) for pure functions: mailbox name normalization, list rendering model, SSE event merge/dedupe, sandbox iframe attribute construction, in internal/web/static/app.test.mjs
+- [ ] T028 [P] [US1] Web UI logic tests with the Node built-in runner (`node --test`) for pure functions: mailbox name normalization, list rendering model, SSE event merge/dedupe, sandbox iframe attribute construction, sign-in state handling (401 shows the token prompt; the token is never put in a URL or kept in `localStorage`), in internal/web/static/app.test.mjs
 - [ ] T029 [US1] End-to-end test: start the server on loopback ports, deliver mail with `net/smtp`, fetch static UI, list and get via HTTP, receive the SSE event, asserting the message is visible in the list and delivered as an SSE event within 1 s of SMTP completion (stricter than SC-001's 5 s, to avoid flakiness), in tests/e2e/us1_web_test.go
 
 ### Implementation for User Story 1
@@ -85,7 +85,7 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T032 [US1] Implement the sandboxed HTML endpoint (strict CSP, nosniff, no cookies) in internal/httpapi/html.go
 - [ ] T033 [US1] Implement the per-mailbox SSE endpoint (`message` and `deleted` events, 15 s heartbeat) in internal/httpapi/events.go
 - [ ] T034 [US1] Implement `/healthz` (status, uptime, message count, store bytes) in internal/httpapi/health.go
-- [ ] T035 [P] [US1] Build the vanilla web UI (mailbox input, message list, message view with `<iframe sandbox>` without `allow-same-origin`, `EventSource` live updates, delete buttons wired to the delete endpoints once US2 lands, no external requests, payload < 30 KB) in internal/web/static/index.html, internal/web/static/app.js, internal/web/static/app.css
+- [ ] T035 [P] [US1] Build the vanilla web UI (mailbox input, message list, message view with `<iframe sandbox>` without `allow-same-origin`, `EventSource` live updates, delete buttons wired to the delete endpoints once US2 lands, a token prompt shown only when the server answers 401, posting to `POST /api/v1/session` (FR-027), no external requests, payload < 30 KB) in internal/web/static/index.html, internal/web/static/app.js, internal/web/static/app.css
 - [ ] T036 [US1] Embed static assets with `go:embed`, serve with gzip and cache headers, and mount the UI and API on the HTTP server in internal/web/web.go and cmd/phantom-mail/main.go
 
 **Checkpoint**: User Story 1 is fully functional and testable on its own (T029 passes).
@@ -103,7 +103,7 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T037 [P] [US2] Tests for `GET .../messages/wait` (returns existing messages immediately when `after` omitted, holds until arrival, `204` on timeout, `after` filtering, timeout bounds 1-60, multiple concurrent waiters all released) in internal/httpapi/wait_test.go
 - [ ] T038 [P] [US2] Tests for `DELETE .../messages/{id}` (`204`, then `404`) and `DELETE .../messages` (`204`, idempotent), including `deleted` SSE event, in internal/httpapi/delete_test.go
 - [ ] T039 [P] [US2] Tests for attachment download (correct bytes, `Content-Disposition: attachment`, `nosniff`, `404` for bad index) in internal/httpapi/attachments_test.go
-- [ ] T040 [P] [US2] Tests for optional `PM_API_TOKEN` auth (`401` without/with wrong bearer, `/healthz` stays open, SMTP unaffected) and HTTP per-IP rate limiting with trusted-proxy handling, in internal/httpapi/auth_test.go
+- [ ] T040 [P] [US2] Tests for optional `PM_API_TOKEN` auth (`401` without/with wrong bearer; `POST /api/v1/session` sets an `HttpOnly; SameSite=Strict` cookie that then authorizes list, SSE, HTML, and attachment requests; wrong token `401` and repeated failures `429`; `DELETE /api/v1/session` signs out; token in a query string is rejected; token never appears in logs; `Secure` flag set behind a trusted HTTPS proxy; `/healthz`, `/openapi.yaml`, and SMTP stay open) and HTTP per-IP rate limiting with trusted-proxy handling, in internal/httpapi/auth_test.go
 - [ ] T041 [P] [US2] Contract test: every path and method in contracts/openapi.yaml has a registered route and vice versa, and `/openapi.yaml` is served and equals the contract, in tests/integration/openapi_test.go
 - [ ] T042 [US2] End-to-end scripted flow (send, wait, extract six-digit code, delete) mirroring quickstart.md, with no manual steps (SC-003), and asserting the full send-to-code-extracted path completes within 2 s on loopback (well inside SC-002's 30 s), in tests/e2e/us2_api_test.go
 
@@ -112,7 +112,7 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T043 [US2] Implement the long-poll wait handler on top of the hub in internal/httpapi/wait.go
 - [ ] T044 [P] [US2] Implement delete-message and empty-mailbox handlers in internal/httpapi/delete.go
 - [ ] T045 [P] [US2] Implement attachment download handler in internal/httpapi/attachments.go
-- [ ] T046 [P] [US2] Implement bearer-token middleware and HTTP per-IP rate limiting (using client-IP resolution from internal/limits/proxy.go, T022) in internal/httpapi/auth.go
+- [ ] T046 [P] [US2] Implement bearer-token and session-cookie middleware (cookie = HMAC-SHA256 of the token, constant-time comparison, `POST`/`DELETE /api/v1/session` handlers) and HTTP per-IP rate limiting including failed sign-in attempts (using client-IP resolution from internal/limits/proxy.go, T022) in internal/httpapi/auth.go
 - [ ] T047 [US2] Embed contracts/openapi.yaml (copy into internal/httpapi/openapi.yaml with a test asserting equality to the source contract) and serve it at `/openapi.yaml` in internal/httpapi/openapi.go
 - [ ] T048 [US2] Hook the UI delete buttons to the delete endpoints in internal/web/static/app.js
 
@@ -197,8 +197,8 @@ description: "Task list for the Disposable Inbox Service"
 - [ ] T071 [P] Startup test: 10,000 stored messages rebuild the index and become ready in under 1 s in tests/bench/startup_test.go
 - [ ] T072 [P] Write docs/index.md (overview, quick start, doc map)
 - [ ] T073 [P] Write the complete configuration reference (every `PM_*` setting, default, effect, example) in docs/configuration.md, including the deliberate choice that mailbox names are not scoped by domain
-- [ ] T074 [P] Write the API reference with request/response examples, error cases, long-poll, SSE, and auth in docs/api.md
-- [ ] T075 [P] Write the web interface guide in docs/web-ui.md
+- [ ] T074 [P] Write the API reference with request/response examples, error cases, long-poll, SSE, and auth (bearer header for scripts, session cookie for browsers) in docs/api.md
+- [ ] T075 [P] Write the web interface guide, including signing in when an access token is configured, in docs/web-ui.md
 - [ ] T076 [P] Write the end-to-end verification-code testing guide (unique mailbox per run, wait, extract code, examples in curl and Go) in docs/testing-verification-flows.md
 - [ ] T077 [P] Write development docs (running tests and benchmarks natively and in Docker, repo layout, dependency policy, adding a setting or endpoint with its docs) in docs/development.md
 - [ ] T078 Docs verification test: extract fenced `bash` blocks tagged for verification from docs/ and quickstart.md, run them against a started instance, and assert documented settings and endpoints exist in config and openapi.yaml, in tests/docs/docs_test.go

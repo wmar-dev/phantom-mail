@@ -5,10 +5,40 @@ info:
   description: >
     Receive-only disposable inbox API. Mailboxes are created implicitly when mail arrives.
     Mailbox names are case-insensitive; a "+tag" suffix is ignored. If the server is started
-    with PM_API_TOKEN, every request except /healthz must send "Authorization: Bearer <token>".
+    with PM_API_TOKEN, every request except /healthz and /api/v1/session must send "Authorization: Bearer <token>" or carry the session cookie obtained from POST /api/v1/session (used by the web interface, because browsers cannot add headers to EventSource, iframes, or downloads).
 servers:
   - url: http://localhost:8080
+security:
+  - bearerAuth: []
+  - cookieAuth: []
 paths:
+  /api/v1/session:
+    post:
+      summary: Sign in with the access token (web interface)
+      description: >
+        Only meaningful when the server has PM_API_TOKEN set. Exchanges the token for an
+        HttpOnly, SameSite=Strict session cookie. Failed attempts are rate limited.
+      operationId: createSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '204': { description: Signed in; Set-Cookie header present }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Sign out (clears the session cookie)
+      operationId: deleteSession
+      security: []
+      responses:
+        '204': { description: Signed out }
   /api/v1/mailboxes/{mailbox}/messages:
     get:
       summary: List messages in a mailbox, newest first
@@ -155,6 +185,7 @@ paths:
     get:
       summary: Health status (no authentication)
       operationId: health
+      security: []
       responses:
         '200':
           description: Service is healthy
@@ -172,12 +203,21 @@ paths:
     get:
       summary: This specification, served by the running service
       operationId: openapi
+      security: []
       responses:
         '200':
           description: OpenAPI document
           content:
             application/yaml: { schema: { type: string } }
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: pm_session
   parameters:
     Mailbox:
       name: mailbox

@@ -131,6 +131,7 @@ Messages are automatically removed after a limited time so the service does not 
 - **FR-024**: The project MUST include thorough documentation covering: an overview and quick start; local setup with and without Docker; running the tests; the full configuration reference (every setting, its default, and its effect); the complete API reference with request and response examples and error cases; a web interface user guide; a cloud deployment guide, including domain, mail-routing, and encrypted-connection setup, with troubleshooting; and an example of testing a verification-code sign-up flow end to end.
 - **FR-025**: Documentation MUST be kept in the repository, versioned with the code, and every command and example in it MUST be verified by an automated check (or the test suite) so it cannot silently go stale. A change to behavior, configuration, or the API MUST include the matching documentation update.
 - **FR-026**: The API MUST be described by a machine-readable specification that is served by the running service and kept consistent with actual behavior.
+- **FR-027**: When the operator configures an access token, the API and web interface MUST require it. Scripts present the token on each request. The web interface asks for it once and keeps the viewer signed in for the browser session, so live updates, message bodies, and attachment downloads keep working, and the token never appears in a URL or log. Failed attempts MUST be rate limited. The health check and inbound mail are unaffected.
 - **FR-016**: System MUST take all deployment-specific settings (served domain, ports, limits, storage location) from environment configuration, with local defaults.
 - **FR-017**: System MUST be deployable to a cloud environment and served on a custom domain for both web/API traffic (over an encrypted connection) and inbound mail.
 - **FR-018**: System MUST expose a health status and shut down gracefully so deployments and restarts do not lose accepted messages.
@@ -161,7 +162,7 @@ Messages are automatically removed after a limited time so the service does not 
 
 ## Assumptions
 
-- Like maildrop.cc, mailboxes are public: anyone who knows a mailbox name can read it. The service is for testing with non-sensitive data only, and no user accounts or authentication are required for the web interface or API reads. The deployment owner may optionally restrict access to the API.
+- Like maildrop.cc, mailboxes are public: anyone who knows a mailbox name can read it. The service is for testing with non-sensitive data only, and no user accounts or authentication are required for the web interface or API reads. The deployment owner may optionally require an access token for the web interface and API (FR-027).
 - The owner controls a domain and can set its mail-routing and web records; registering the domain is out of scope.
 - Receive-only: sending email, replying, and forwarding are out of scope.
 - Single operator instance; multi-tenant hosting and billing are out of scope.

@@ -111,7 +111,15 @@ friendly, documented).
 ## R8. Security and access model
 
 - **Decision**: Public mailboxes (per spec assumption). Optional `PM_API_TOKEN`: when set, API
-  and UI requests must present it (bearer header or UI-stored token); SMTP is unaffected. Rate
+  and UI requests must be authenticated; SMTP is unaffected. Scripts send `Authorization:
+  Bearer <token>`. Browsers cannot attach that header to `EventSource`, `<iframe src>`, or plain
+  download links, so the UI posts the token once to `POST /api/v1/session`, which sets an
+  `HttpOnly; SameSite=Strict` cookie (`Secure` when the request arrived over HTTPS, determined
+  via a trusted proxy's `X-Forwarded-Proto`). The cookie value is `HMAC-SHA256(token, "session")`
+  (stdlib `crypto/hmac`), so the raw token is never stored client-side, and comparisons use
+  `subtle.ConstantTimeCompare`. SameSite=Strict covers CSRF for the delete endpoints. The token
+  is never accepted in query strings and never logged. Failed attempts share the per-IP
+  rate limit. Rate
   limits: token bucket per remote IP on SMTP connections/messages and per mailbox on ingest;
   HTTP requests per IP. All limits are configurable. Mailbox names validated to
   `[a-z0-9._-]{1,64}` after lowercasing and `+tag` stripping, which also prevents path
