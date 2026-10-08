@@ -23,7 +23,7 @@ with environment-only configuration. See [research.md](research.md) for the deci
 
 **Storage**: One file per message on a mountable data directory (`PM_DATA_DIR`) with an in-memory metadata index rebuilt on startup. Hidden behind a `Store` interface with an in-memory implementation used by tests.
 
-**Testing**: `go test` (unit, integration with real SMTP client from stdlib and `httptest`, end-to-end against the built binary), `go test -race`, benchmarks for the hot paths; docs verification test that executes documented commands/examples. Run via `make test` (local Go) or `docker compose run --rm test` (only Docker required).
+**Testing**: `go test` (unit, integration with real SMTP client from stdlib and `httptest`, end-to-end against the built binary), `go test -race`, benchmarks for the hot paths; docs verification test that executes documented commands/examples. Run via `make test` (local Go) or `docker compose run --rm test` (only Docker required). Web UI logic is tested with Node's built-in test runner (`node --test`, no npm packages). Test-time tools (Go toolchain, Node, Docker) are permitted; they never enter the runtime image or `go.mod`, and the Docker `test` service bundles them so only Docker is needed.
 
 **Target Platform**: Linux container (amd64/arm64), also runnable natively on macOS/Linux for development.
 
@@ -31,7 +31,7 @@ with environment-only configuration. See [research.md](research.md) for the deci
 
 **Performance Goals**: Ingest ≥ 500 messages/s sustained on one vCPU; message visible to list/wait/SSE within 1 s of SMTP `DATA` completion (p95); mailbox list p95 < 10 ms and message fetch p95 < 20 ms at 100 messages per mailbox; cold start to ready < 1 s with 10,000 stored messages.
 
-**Constraints**: Idle resident memory < 20 MB and < 64 MB under sustained load at 50 active mailboxes; container image < 15 MB; web UI initial payload < 30 KB uncompressed with no third-party requests; hard memory bounds from message-size cap, per-mailbox count cap, and total-store byte cap (oldest evicted first); no outbound mail ever.
+**Constraints**: Idle resident memory < 20 MB and < 64 MB under sustained load at 50 active mailboxes; container image < 15 MB; web UI initial payload < 30 KB uncompressed with no third-party requests; hard memory bounds from message-size cap, per-mailbox count cap, and total-store byte cap (oldest evicted first); no outbound mail ever. Runtime image and `go.mod` stay free of Node and third-party modules. Security and operability rules: HTML bodies render only in a sandboxed frame (no `allow-same-origin`) behind a strict CSP; attachments are served as downloads with `X-Content-Type-Options: nosniff`; client IPs come from `X-Forwarded-For` only when the peer is in `PM_TRUSTED_PROXIES`; the SMTP server answers `452` (temporary failure) when storage is full; mailbox names are not scoped by domain.
 
 **Scale/Scope**: Single instance, up to ~10,000 stored messages / 1 GB on disk by default, 50+ simultaneously active mailboxes (SC-007).
 
@@ -77,12 +77,11 @@ internal/
 ├── smtpd/                   # minimal receive-only SMTP server (no relay, no AUTH, no STARTTLS in v1)
 ├── hub/                     # in-process pub/sub powering wait and SSE
 ├── retention/               # expiry + per-mailbox and total-size eviction
-├── limits/                  # per-sender / per-mailbox rate limiting (token bucket)
-├── httpapi/                 # REST handlers, SSE, health, OpenAPI serving, optional token auth
+├── limits/                  # per-IP / per-mailbox rate limiting (token bucket) + trusted-proxy client-IP resolution (PM_TRUSTED_PROXIES)
+├── httpapi/                 # REST handlers, SSE, health, OpenAPI serving, optional token auth; attachments served as downloads with nosniff
 └── web/                     # embedded static UI (index.html, app.js, app.css)
 
 tests/
-├── unit/                    # (colocated *_test.go are also used; this holds cross-package helpers)
 ├── integration/             # real SMTP client -> store -> HTTP client
 ├── e2e/                     # runs the built binary / container
 ├── docs/                    # executes commands and examples from docs/
@@ -94,10 +93,15 @@ docs/
 ├── configuration.md         # every PM_* setting, default, effect
 ├── api.md                   # API reference with examples and errors
 ├── web-ui.md                # web interface guide
-├── deployment.md            # cloud deployment, DNS (MX/A), TLS, port 25 notes, troubleshooting
+├── deployment.md            # cloud deployment, DNS (MX/A), TLS via reverse proxy (SSE buffering off), port 25 notes, troubleshooting
+├── examples/
+│   └── Caddyfile            # example HTTPS reverse proxy in front of port 8080
 ├── testing-verification-flows.md   # end-to-end example of a code-verification sign-up test
 └── development.md           # running tests, benchmarks, contributing
 
+README.md                    # short intro and quick start, links to docs/index.md
+.github/workflows/ci.yml     # runs `make test` and `make docs-check` (same commands as local)
+.dockerignore
 Dockerfile                   # multi-stage: golang builder -> scratch runtime
 compose.yaml                 # app + `test` service profile
 Makefile                     # build, test, bench, docker, docs-check

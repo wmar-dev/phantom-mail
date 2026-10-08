@@ -103,6 +103,8 @@ Messages are automatically removed after a limited time so the service does not 
 - A flood of mail to one mailbox or from one sender does not take the service down for others.
 - Multiple clients waiting on the same mailbox all receive the new message.
 - Messages with attachments list the attachments, and they can be downloaded.
+- When storage is full, the sender is told to retry later (a temporary failure) rather than the message being silently dropped or the service crashing.
+- Mail addressed to the same mailbox name at different served domains goes to one shared mailbox (names are not scoped by domain).
 
 ## Requirements *(mandatory)*
 
@@ -120,7 +122,7 @@ Messages are automatically removed after a limited time so the service does not 
 - **FR-010**: API MUST provide a way to wait for a new message in a mailbox with a caller-specified timeout.
 - **FR-011**: API MUST allow attachments to be downloaded.
 - **FR-012**: System MUST automatically delete messages after a configurable retention period (default 24 hours) and cap messages per mailbox (default 100 messages).
-- **FR-013**: System MUST enforce a configurable maximum message size and per-sender/per-mailbox rate limits to protect availability.
+- **FR-013**: System MUST enforce a configurable maximum message size and per-remote-address and per-mailbox rate limits to protect availability.
 - **FR-014**: System MUST run entirely on a developer machine with one documented command and require no cloud account, credentials, or internet access.
 - **FR-015**: System MUST provide a documented way to deliver a test email to a local instance and a single documented command that runs the full automated test suite offline.
 - **FR-021**: System MUST be packaged as a Docker container image that runs the complete service (web, API, mail receiver) with a single command, and MUST provide a Docker Compose setup for local use so a developer needs only Docker installed.
@@ -152,7 +154,7 @@ Messages are automatically removed after a limited time so the service does not 
 - **SC-004**: A new developer can go from fresh checkout to a running local instance receiving a test email in under 5 minutes by following the documentation.
 - **SC-005**: The full automated test suite runs and passes on a machine with no network access.
 - **SC-006**: An owner can go from a deployed instance to receiving a real external email on their own domain by following the documentation, with no code changes.
-- **SC-007**: The service handles 50 simultaneous active mailboxes receiving mail without any message loss or noticeable slowdown.
+- **SC-007**: The service handles 50 simultaneous active mailboxes receiving mail with no message loss, while mailbox list requests stay under 50 ms at the 95th percentile.
 - **SC-009**: With only Docker installed, a developer can start the full service with one command and receive a test email within 5 minutes, and the identical image runs in the cloud deployment with only configuration changes.
 - **SC-010**: A first-time user can complete local setup, an API call, and a cloud deployment using only the documentation, without asking anyone for help; every documented setting and API operation appears in the reference, and 100% of documented commands and examples pass automated verification.
 - **SC-008**: 100% of messages past the retention period are unavailable within 10 minutes of expiry.
