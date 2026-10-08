@@ -125,6 +125,11 @@ Messages are automatically removed after a limited time so the service does not 
 - **FR-013**: System MUST enforce a configurable maximum message size and per-remote-address and per-mailbox rate limits, plus a configurable cap on the number of mailboxes, to protect availability.
 - **FR-014**: System MUST run entirely on a developer machine with one documented command and require no cloud account, credentials, or internet access.
 - **FR-015**: System MUST provide a documented way to deliver a test email to a local instance and a single documented command that runs the full automated test suite offline.
+- **FR-016**: System MUST take all deployment-specific settings (served domain, ports, limits, storage location) from environment configuration, with local defaults.
+- **FR-017**: System MUST be deployable to a cloud environment and served on a custom domain for both web/API traffic (over an encrypted connection) and inbound mail.
+- **FR-018**: System MUST expose a health status and shut down gracefully so deployments and restarts do not lose accepted messages.
+- **FR-019**: System MUST write operational logs to standard output in a structured form.
+- **FR-020**: System MUST NOT send outbound mail to external recipients (receive-only), so it cannot be used as a spam relay.
 - **FR-021**: System MUST be packaged as a Docker container image that runs the complete service (web, API, mail receiver) with a single command, and MUST provide a Docker Compose setup for local use so a developer needs only Docker installed.
 - **FR-022**: The container image MUST be configurable solely through environment variables, keep durable data on a mountable volume, run as a non-root user, expose a container health check, and stop cleanly on termination signals.
 - **FR-023**: The same container image MUST be usable unchanged for local use and for the cloud deployment, and the automated test suite MUST be runnable inside a container as well as directly.
@@ -132,11 +137,6 @@ Messages are automatically removed after a limited time so the service does not 
 - **FR-025**: Documentation MUST be kept in the repository, versioned with the code, and every command and example in it MUST be verified by an automated check (or the test suite) so it cannot silently go stale. A change to behavior, configuration, or the API MUST include the matching documentation update.
 - **FR-026**: The API MUST be described by a machine-readable specification that is served by the running service and kept consistent with actual behavior.
 - **FR-027**: When the operator configures an access token, the API and web interface MUST require it. Scripts present the token on each request. The web interface asks for it once and keeps the viewer signed in for the browser session, so live updates, message bodies, and attachment downloads keep working, and the token never appears in a URL or log. Failed attempts MUST be rate limited. The health check and inbound mail are unaffected.
-- **FR-016**: System MUST take all deployment-specific settings (served domain, ports, limits, storage location) from environment configuration, with local defaults.
-- **FR-017**: System MUST be deployable to a cloud environment and served on a custom domain for both web/API traffic (over an encrypted connection) and inbound mail.
-- **FR-018**: System MUST expose a health status and shut down gracefully so deployments and restarts do not lose accepted messages.
-- **FR-019**: System MUST write operational logs to standard output in a structured form.
-- **FR-020**: System MUST NOT send outbound mail to external recipients (receive-only), so it cannot be used as a spam relay.
 
 ### Key Entities
 
@@ -152,13 +152,13 @@ Messages are automatically removed after a limited time so the service does not 
 - **SC-001**: A message sent to a new address becomes visible in the web interface and API within 5 seconds of delivery in 95% of cases.
 - **SC-002**: A user can go from opening the web interface to reading a verification code in under 30 seconds.
 - **SC-003**: An automated script can complete a full sign-up-and-verify test flow (send, wait, read code) using only API calls, with no manual steps.
-- **SC-004**: A new developer can go from fresh checkout to a running local instance receiving a test email in under 5 minutes by following the documentation.
+- **SC-004**: A new developer with only Docker installed can go from a fresh checkout to a running local instance receiving a test email in under 5 minutes by following the documentation.
 - **SC-005**: The full automated test suite runs and passes on a machine with no network access.
 - **SC-006**: An owner can go from a deployed instance to receiving a real external email on their own domain by following the documentation, with no code changes.
 - **SC-007**: The service handles 50 simultaneous active mailboxes receiving mail with no message loss, while mailbox list requests stay under 50 ms at the 95th percentile.
-- **SC-009**: With only Docker installed, a developer can start the full service with one command and receive a test email within 5 minutes, and the identical image runs in the cloud deployment with only configuration changes.
-- **SC-010**: A first-time user can complete local setup, an API call, and a cloud deployment using only the documentation, without asking anyone for help; every documented setting and API operation appears in the reference, and 100% of documented commands and examples pass automated verification.
 - **SC-008**: 100% of messages past the retention period are unavailable within 10 minutes of expiry.
+- **SC-009**: The identical container image used locally runs in the cloud deployment with only configuration changes.
+- **SC-010**: A first-time user can complete local setup, an API call, and a cloud deployment using only the documentation, without asking anyone for help; every documented setting and API operation appears in the reference, and 100% of documented commands and examples pass automated verification.
 
 ## Assumptions
 
