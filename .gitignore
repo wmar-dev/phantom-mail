@@ -11,3 +11,5 @@ data/
 .vscode/
 # Environment
 .env*
+__pycache__/
+*.pyc

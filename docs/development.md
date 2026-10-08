@@ -51,7 +51,7 @@ The project constitution (`.specify/memory/constitution.md`) sets the rules; in 
 |---------|--------------|
 | `make test` | `gofmt` check, `go vet`, `go test -race ./...`, and the web interface tests |
 | `docker compose run --rm test` | The same, plus `make docs-check`, inside Docker; needs only Docker |
-| `make docs-check` | Runs the documentation tests (`tests/docs`) |
+| `make docs-check` | Runs the documentation tests (`tests/docs`); the Python and Node.js examples need `python3` and `node`, and their checks are skipped when absent. New language examples must follow the [command-line contract](../specs/002-multilanguage-examples/contracts/cli.md) |
 | `make bench` | Benchmarks (`tests/bench`) |
 | `make build` | Static binary in `bin/phantom-mail` |
 | `make run` | Run locally with defaults |

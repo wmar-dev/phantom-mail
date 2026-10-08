@@ -23,6 +23,23 @@ Which domain? Locally it is `localhost` and the system under test must be able t
 in `PM_DOMAINS`, and the system under test is a real third-party site (see
 [deployment](deployment.md)).
 
+## Examples by language
+
+Complete, copy-ready programs that wait for the email and print the code. Each uses only its
+language's standard library, so there is nothing to install:
+
+| Language | Needs | Run it |
+|----------|-------|--------|
+| [Go](#with-the-go-example-program) | Go 1.23+ | `go run ./docs/examples/verification-code -mailbox NAME` |
+| [Python](#with-the-python-example-program) | Python 3.9+ | `python3 docs/examples/verification-code-python/verification_code.py --mailbox NAME` |
+| [Node.js](#with-the-nodejs-example-program) | Node.js 18+ | `node docs/examples/verification-code-node/verification-code.mjs --mailbox NAME` |
+
+All three take the same options (`mailbox`, `api`, `timeout`, `pattern`), read `PM_API_TOKEN`, and
+exit with `0` when a code was printed, `1` when no email arrived or it had no code, and `2` for a
+usage or connection error. The only difference is the flag prefix: the Go program uses a single
+dash (`-mailbox`), the Python and Node.js programs a double dash (`--mailbox`). For any other
+language, see [From any language](#from-any-language).
+
 ## With curl and jq
 
 This complete example plays both roles: a subshell stands in for the website and mails the code
@@ -72,6 +89,84 @@ Flags: `-mailbox` (required), `-api` (default `http://localhost:8080`), `-timeou
 (a regular expression for codes that are not six digits, for example `[A-Z0-9]{8}`). It reads
 `PM_API_TOKEN` from the environment. Exit status `0` means a code was printed, `1` means no email
 arrived or it had no code, `2` means a usage or connection error.
+
+## With the Python example program
+
+[`docs/examples/verification-code-python`](examples/verification-code-python/verification_code.py) does the same as the Go program, with the Python 3.9 or newer standard library only
+(nothing to install):
+
+```bash verify
+BOX="signup-$RANDOM"
+( sleep 1
+  printf 'From: Shop <no-reply@shop.example>\r\nTo: %s@localhost\r\nSubject: Welcome\r\n\r\nUse 904217 to finish signing up.\r\n' "$BOX" \
+    | curl -s --url smtp://localhost:2525 --mail-from no-reply@shop.example --mail-rcpt "$BOX@localhost" -T - ) &
+CODE=$(python3 docs/examples/verification-code-python/verification_code.py --api http://localhost:8080 --mailbox "$BOX" --timeout 20s)
+echo "verification code: $CODE"
+test "$CODE" = "904217"
+wait
+```
+
+Options: `--mailbox` (required), `--api`, `--timeout`, and `--pattern`, with the same meaning and
+defaults as the Go flags. It reads `PM_API_TOKEN` and uses the same exit statuses. It prints only
+the code on standard output; messages go to standard error.
+
+Exit statuses and a custom pattern, checked against a live instance:
+
+```bash verify
+BOX="empty-$RANDOM"
+rc=0; out=$(python3 docs/examples/verification-code-python/verification_code.py --api http://localhost:8080 --mailbox "$BOX" --timeout 1s 2>/dev/null) || rc=$?
+test "$rc" = 1 && test -z "$out"
+rc=0; python3 docs/examples/verification-code-python/verification_code.py --api http://localhost:8080 2>/dev/null || rc=$?
+test "$rc" = 2
+rc=0; python3 docs/examples/verification-code-python/verification_code.py --api http://localhost:1 --mailbox "$BOX" --timeout 1s 2>/dev/null || rc=$?
+test "$rc" = 2
+BOX="pattern-$RANDOM"
+( sleep 1
+  printf 'From: Shop <no-reply@shop.example>\r\nTo: %s@localhost\r\nSubject: Code\r\n\r\nCode: AB12CD34\r\n' "$BOX" \
+    | curl -s --url smtp://localhost:2525 --mail-from no-reply@shop.example --mail-rcpt "$BOX@localhost" -T - ) &
+CODE=$(python3 docs/examples/verification-code-python/verification_code.py --api http://localhost:8080 --mailbox "$BOX" --timeout 20s --pattern '[A-Z0-9]{8}')
+test "$CODE" = "AB12CD34"
+wait
+```
+
+## With the Node.js example program
+
+[`docs/examples/verification-code-node`](examples/verification-code-node/verification-code.mjs) does the same as the Go program, with the Node.js 18 or newer standard library only
+(nothing to install):
+
+```bash verify
+BOX="signup-$RANDOM"
+( sleep 1
+  printf 'From: Shop <no-reply@shop.example>\r\nTo: %s@localhost\r\nSubject: Welcome\r\n\r\nUse 615203 to finish signing up.\r\n' "$BOX" \
+    | curl -s --url smtp://localhost:2525 --mail-from no-reply@shop.example --mail-rcpt "$BOX@localhost" -T - ) &
+CODE=$(node docs/examples/verification-code-node/verification-code.mjs --api http://localhost:8080 --mailbox "$BOX" --timeout 20s)
+echo "verification code: $CODE"
+test "$CODE" = "615203"
+wait
+```
+
+Options: `--mailbox` (required), `--api`, `--timeout`, and `--pattern`, with the same meaning and
+defaults as the Go flags. It reads `PM_API_TOKEN` and uses the same exit statuses. It prints only
+the code on standard output; messages go to standard error.
+
+Exit statuses and a custom pattern, checked against a live instance:
+
+```bash verify
+BOX="empty-$RANDOM"
+rc=0; out=$(node docs/examples/verification-code-node/verification-code.mjs --api http://localhost:8080 --mailbox "$BOX" --timeout 1s 2>/dev/null) || rc=$?
+test "$rc" = 1 && test -z "$out"
+rc=0; node docs/examples/verification-code-node/verification-code.mjs --api http://localhost:8080 2>/dev/null || rc=$?
+test "$rc" = 2
+rc=0; node docs/examples/verification-code-node/verification-code.mjs --api http://localhost:1 --mailbox "$BOX" --timeout 1s 2>/dev/null || rc=$?
+test "$rc" = 2
+BOX="pattern-$RANDOM"
+( sleep 1
+  printf 'From: Shop <no-reply@shop.example>\r\nTo: %s@localhost\r\nSubject: Code\r\n\r\nCode: AB12CD34\r\n' "$BOX" \
+    | curl -s --url smtp://localhost:2525 --mail-from no-reply@shop.example --mail-rcpt "$BOX@localhost" -T - ) &
+CODE=$(node docs/examples/verification-code-node/verification-code.mjs --api http://localhost:8080 --mailbox "$BOX" --timeout 20s --pattern '[A-Z0-9]{8}')
+test "$CODE" = "AB12CD34"
+wait
+```
 
 ## From any language
 

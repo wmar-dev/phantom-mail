@@ -35,7 +35,7 @@ That is the whole loop. The rest of the documentation covers each piece:
 | Know every setting, default and limit | [Configuration reference](configuration.md) |
 | Fetch mail or wait for a code from a script | [API reference](api.md) |
 | Use the web page | [Web interface guide](web-ui.md) |
-| Automate "sign up, read the code, continue" in tests | [Testing sign-ups with verification codes](testing-verification-flows.md) |
+| Automate "sign up, read the code, continue" in tests (examples in Go, Python and Node.js) | [Testing sign-ups with verification codes](testing-verification-flows.md) |
 | Change the code, run benchmarks, add a setting or endpoint | [Development](development.md) |
 
 ## How it works in one paragraph

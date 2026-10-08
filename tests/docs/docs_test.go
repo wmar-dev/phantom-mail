@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/smtp"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -123,7 +124,7 @@ func freeAddr(t *testing.T) string {
 }
 
 // startInstance runs the real binary on free ports with the default (local) configuration.
-func startInstance(t *testing.T) (httpAddr, smtpAddr string) {
+func startInstance(t *testing.T, extraEnv ...string) (httpAddr, smtpAddr string) {
 	t.Helper()
 	httpAddr, smtpAddr = freeAddr(t), freeAddr(t)
 	cmd := exec.Command(binary(t))
@@ -133,6 +134,7 @@ func startInstance(t *testing.T) (httpAddr, smtpAddr string) {
 		"PM_SMTP_ADDR=" + smtpAddr,
 		"PM_DATA_DIR=" + t.TempDir(),
 	}
+	cmd.Env = append(cmd.Env, extraEnv...)
 	var logs bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &logs, &logs
 	if err := cmd.Start(); err != nil {
@@ -180,7 +182,7 @@ func TestVerifiedExamplesRun(t *testing.T) {
 				total++
 				name := fmt.Sprintf("line_%d", b.line)
 				t.Run(name, func(t *testing.T) {
-					for _, tool := range []string{"curl", "jq", "go", "grep", "xargs"} {
+					for _, tool := range []string{"curl", "jq", "go", "grep", "xargs", "python3", "node"} {
 						if regexp.MustCompile(`\b` + tool + `\b`).MatchString(b.text) {
 							if _, err := exec.LookPath(tool); err != nil {
 								t.Skipf("%s is not installed here (the Docker test image has it)", tool)
@@ -383,5 +385,115 @@ func TestProductionComposeExampleIsValid(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, "docs", "examples", "Caddyfile")); err != nil {
 		t.Fatal("docs/examples/Caddyfile referenced by compose.prod.yaml is missing")
+	}
+}
+
+// ---- language examples ----
+
+// languageExamples are the verification-code programs, one per language. The
+// command lines differ only in the flag prefix.
+var languageExamples = []struct {
+	name, path, runtime string
+	flagPrefix          string
+}{
+	{"Go", "docs/examples/verification-code/main.go", "go", "-"},
+	{"Python", "docs/examples/verification-code-python/verification_code.py", "python3", "--"},
+	{"Node.js", "docs/examples/verification-code-node/verification-code.mjs", "node", "--"},
+}
+
+func exampleCommand(ex int, args ...string) *exec.Cmd {
+	e := languageExamples[ex]
+	pre := e.flagPrefix
+	var full []string
+	if e.runtime == "go" {
+		full = []string{"run", "./docs/examples/verification-code"}
+	} else {
+		full = []string{e.path}
+	}
+	for i := 0; i+1 < len(args); i += 2 {
+		full = append(full, pre+args[i], args[i+1])
+	}
+	cmd := exec.Command(e.runtime, full...)
+	cmd.Dir = root
+	return cmd
+}
+
+// A service that requires an access token is usable from every example when
+// PM_API_TOKEN is set, and the examples say why it fails when it is not.
+func TestExamplesSendAccessToken(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	httpAddr, smtpAddr := startInstance(t, "PM_API_TOKEN=secret")
+	for i, ex := range languageExamples {
+		t.Run(ex.name, func(t *testing.T) {
+			if _, err := exec.LookPath(ex.runtime); err != nil {
+				t.Skipf("%s is not installed here", ex.runtime)
+			}
+			box := fmt.Sprintf("token-%s-%d", strings.ToLower(strings.ReplaceAll(ex.name, ".", "")), i)
+			msg := "From: shop@shop.example\r\nTo: " + box + "@localhost\r\nSubject: Code\r\n\r\nYour code is 731905\r\n"
+			if err := smtp.SendMail(smtpAddr, nil, "shop@shop.example", []string{box + "@localhost"}, []byte(msg)); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"api", "http://" + httpAddr, "mailbox", box, "timeout", "10s"}
+
+			with := exampleCommand(i, args...)
+			with.Env = append(os.Environ(), "PM_API_TOKEN=secret")
+			out, err := with.Output()
+			if err != nil || strings.TrimSpace(string(out)) != "731905" {
+				t.Fatalf("with the token: got %q, err %v", out, err)
+			}
+
+			without := exampleCommand(i, args...)
+			without.Env = append(os.Environ(), "PM_API_TOKEN=")
+			var stderr bytes.Buffer
+			without.Stderr = &stderr
+			err = without.Run()
+			exit, ok := err.(*exec.ExitError)
+			// "go run" reports any failing program as status 1.
+			if !ok || (exit.ExitCode() != 2 && ex.runtime != "go") || exit.ExitCode() == 0 {
+				t.Fatalf("without the token: want exit status 2, got %v", err)
+			}
+			if !strings.Contains(stderr.String(), "unauthorized") {
+				t.Errorf("without the token: stderr should say unauthorized, got %q", stderr.String())
+			}
+		})
+	}
+}
+
+var (
+	pyImportRE   = regexp.MustCompile(`(?m)^\s*(?:import|from)\s+([A-Za-z_][\w]*)`)
+	nodeImportRE = regexp.MustCompile(`(?:from\s+|import\(\s*|require\(\s*)['"]([^'"]+)['"]`)
+	pyStdlib     = map[string]bool{"argparse": true, "json": true, "os": true, "re": true, "sys": true, "urllib": true, "time": true, "__future__": true}
+)
+
+// Every example documents the same options, reads the same token setting, is
+// linked from the docs page, and uses nothing but its language's standard library.
+func TestLanguageExamplesAreConsistent(t *testing.T) {
+	page := readFile(t, filepath.Join(root, "docs", "testing-verification-flows.md"))
+	for _, ex := range languageExamples {
+		src := readFile(t, filepath.Join(root, filepath.FromSlash(ex.path)))
+		for _, want := range []string{"PM_API_TOKEN", "mailbox", "timeout", "pattern", "api"} {
+			if !strings.Contains(src, want) {
+				t.Errorf("%s example does not mention %q", ex.name, want)
+			}
+		}
+		if !strings.Contains(page, "examples/"+strings.TrimPrefix(ex.path, "docs/examples/")) {
+			t.Errorf("docs/testing-verification-flows.md does not link to the %s example", ex.name)
+		}
+		switch ex.runtime {
+		case "python3":
+			for _, m := range pyImportRE.FindAllStringSubmatch(src, -1) {
+				if !pyStdlib[m[1]] {
+					t.Errorf("Python example imports %q, which is not on the standard-library list", m[1])
+				}
+			}
+		case "node":
+			for _, m := range nodeImportRE.FindAllStringSubmatch(src, -1) {
+				if !strings.HasPrefix(m[1], "node:") {
+					t.Errorf("Node.js example imports %q; only node: built-ins are allowed", m[1])
+				}
+			}
+		}
 	}
 }

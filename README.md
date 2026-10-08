@@ -19,7 +19,7 @@ Documentation starts at **[docs/index.md](docs/index.md)**:
 [cloud deployment](docs/deployment.md) ·
 [configuration](docs/configuration.md) ·
 [API](docs/api.md) ·
-[testing sign-ups](docs/testing-verification-flows.md) ·
+[testing sign-ups](docs/testing-verification-flows.md) (examples in Go, Python and Node.js) ·
 [development](docs/development.md)
 
 Mailboxes are public by design; use it for test data only.
